@@ -9,7 +9,7 @@ better than the 4:3 ratio of base64.
 '''
 import sys, os, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
-
+# pylint: disable=consider-using-f-string
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
 ZERO = BASE128[0]
@@ -26,13 +26,25 @@ def encode(bytestring):
 
     avoids using := or itertools, to make this work with older Python versions.
 
-    >>> len(encode(bytes(range(256))))
+    >>> encode(bytes(range(256)))
     '''
+    def encode_int(integer):
+        '''
+        inner generator function to process one integerified chunk at a time
+        '''
+        bitmask = (1 << 7) - 1
+        for _ in range(7):
+            yield BASE128[integer & bitmask]
+            integer >>= 7
+
+    encoded = ''
     chunks, padding = chunked(bytestring, 7)
     for chunk in chunks:
         doctest_debug('chunk: %s', chunk)
         integer = int.from_bytes(chunk, 'big')
         doctest_debug('integer: 0x%x', integer)
+        encoded += ''.join(list(reversed(list(encode_int(integer)))))
+    return encoded
 
 def decode(encoded):
     '''
