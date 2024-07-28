@@ -27,20 +27,7 @@ def encode(bytestring):
 
     >>> encode(bytes(range(256)))
     '''
-    chunks = [bytestring[i:i + 7]
-              for i in range(0, len(bytestring) + 6, 7)]
-    padding = 0
-    final = chunks[-1]
-    if len(final):
-        doctest_debug('padding final chunk if necessary')
-        padded = final.ljust(7, b'\0')
-        padding = len(padded) - len(final)
-        chunks[-1] = padded
-        doctest_debug('there are %d bytes of padding', padding)
-    else:
-        doctest_debug('final chunk empty, discarding')
-        chunks.pop(-1)
-    doctest_debug('chunks: %s', chunks)
+    chunks, padding = chunked(bytestring, 7)
     for chunk in chunks:
         doctest_debug('chunk: %s', chunk)
         integer = int.from_bytes(chunk, 'big')
@@ -53,12 +40,17 @@ def decode(encoded):
     >>> decode(BASE128)
     '''
     decoded = b''
-    for chunk in [encoded[i:i + 8] for i in range(0, len(encoded) + 7, 8)]:
+    chunks, padding = chunked(encoded, 8)
+    for chunk in chunks:
         doctest_debug('chunk: %s', chunk)
         integer = 0
         for character in chunk:
             integer <<= 7
-            integer |= BASE128.index(character)
+            try:
+                integer |= BASE128.index(character)
+            except ValueError as problem:
+                logging.error('failed decode at %r: %s', character, problem)
+                raise
         doctest_debug('integer: 0x%x', integer)
         try:
             decoded += integer.to_bytes(7, 'big')
@@ -66,6 +58,38 @@ def decode(encoded):
             logging.error('integer 0x%x will not fit in 7 bytes', integer)
             break
     return decoded
+
+def chunked(something, size):
+    r'''
+    split string or bytes into chunks of size `size`
+
+    use padding if necessary (b'\0' if bytes and '=' if string)
+
+    >>> chunked(b'1234', 1)
+    ([b'1', b'2', b'3', b'4'], 0)
+    >>> chunked(b'1234', 2)
+    ([b'12', b'34'], 0)
+    >>> chunked(b'1234', 3)
+    ([b'123', b'4\x00\x00'], 2)
+    >>> chunked(b'1234', 4)
+    ([b'1234'], 0)
+    >>> chunked(b'1234', 5)
+    ([b'1234\x00'], 1)
+    >>> chunked('1234', 3)
+    (['123', '4=='], 2)
+    >>> chunked('1234', 5)
+    (['1234='], 1)
+    '''
+    padding = 0
+    chunks = [something[i: i + size] for i in range(0, len(something), size)]
+    final = chunks[-1]
+    if len(final) < size:
+        try:
+            chunks[-1] = final.ljust(size, b'\0')
+        except TypeError:
+            chunks[-1] = final.ljust(size, '=')
+        padding = len(chunks[-1]) - len(final)
+    return chunks, padding
 
 if PROGRAM == 'doctest':
     # pylint: disable=function-redefined
