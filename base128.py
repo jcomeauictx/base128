@@ -37,40 +37,40 @@ def encode(bytestring):
     >>> from base64 import b64encode
     >>> encode(b'\0')
     'AA======'
-    >>> b64encode(b'\0')
-    'AA======'
+    >>> b64encode(b'\0').decode()
+    'AA=='
     >>> encode(b'\0\1')
     'AAg====='
-    >>> b64encode(b'\0\1')
-    'AAg====='
+    >>> b64encode(b'\0\1').decode()
+    'AAE='
     >>> encode(b'\0\1\2')
     'AAgg===='
-    >>> b64encode(b'\0\1\2')
-    'AAgg===='
+    >>> b64encode(b'\0\1\2').decode()
+    'AAEC'
     >>> encode(b'\0\1\2\3')
     'AAggY==='
     >>> b64encode(b'\0\1\2\3')
-    'AAggY==='
+    b'AAECAw=='
     >>> encode(b'\0\1\2\3\4')
     'AAggYQ=='
     >>> b64encode(b'\0\1\2\3\4')
-    'AAggYQ=='
+    b'AAECAwQ='
     >>> encode(b'\0\1\2\3\4\5')
     'AAggYQK='
     >>> b64encode(b'\0\1\2\3\4\5')
-    'AAggYQK='
+    b'AAECAwQF'
     >>> encode(b'\0\1\2\3\4\5\6')
     'AAggYQKG'
     >>> b64encode(b'\0\1\2\3\4\5\6')
-    'AAggYQKG'
+    b'AAECAwQFBg=='
     >>> encode(b'\0\1\2\3\4\5\6\7')
     'AAggYQKGDÀ======'
     >>> b64encode(b'\0\1\2\3\4\5\6\7')
-    'AAggYQKGDÀ======'
-    >>> encode(b'\0\1\2\3\4\5\6\7\0x8')
-    'AAggYQKGDÀPDÀ==='
-    >>> b64encode(b'\0\1\2\3\4\5\6\7\0x8')
-    'AAggYQKGDÀPDÀ==='
+    b'AAECAwQFBgc='
+    >>> encode(b'\0\1\2\3\4\5\6\7\x08')
+    'AAggYQKGDÂA====='
+    >>> b64encode(b'\0\1\2\3\4\5\6\7\x08')
+    b'AAECAwQFBgcI'
     '''
     def encode_int(integer):
         '''
@@ -102,23 +102,34 @@ def decode(encoded):
     >>> decode('AA======')
     b'\x00'
     >>> b64decode('AA======')
-    b'x\00'
+    b'\x00'
     >>> decode('AAg=====')
+    b'\x00\x01'
     >>> b64decode('AAg=====')
+    b'\x00\x08'
     >>> decode('AAgg====')
+    b'\x00\x01\x02'
     >>> b64decode('AAgg====')
+    b'\x00\x08 '
     >>> decode('AAggY===')
-    >>> b64decode('AAggY===')
+    b'\x00\x01\x02\x03'
+    >>> # b64decode('AAggY')  # invalid base64 string
     >>> decode('AAggYQ==')
+    b'\x00\x01\x02\x03\x04'
     >>> b64decode('AAggYQ==')
+    b'\x00\x08 a'
     >>> decode('AAggYQK=')
+    b'\x00\x01\x02\x03\x04\x05'
     >>> b64decode('AAggYQK=')
+    b'\x00\x08 a\x02'
     >>> decode('AAggYQKG')
+    b'\x00\x01\x02\x03\x04\x05\x06'
     >>> b64decode('AAggYQKG')
-    >>> decode('AAggYQKGDA======')
-    >>> b64decode('AAggYQKGDA======')
-    >>> decode('AAggYQKGDAPDA===')
-    >>> b64decode('AAggYQKGDAPDA===')
+    b'\x00\x08 a\x02\x86'
+    >>> decode('AAggYQKGDÀ======')
+    b'\x00\x01\x02\x03\x04\x05\x06\x07'
+    >>> decode('AAggYQKGDÂA=====')
+    b'\x00\x01\x02\x03\x04\x05\x06\x07\x08'
     '''
     decoded = b''
     chunks, padding = chunked(encoded, 8)
