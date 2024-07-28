@@ -50,7 +50,9 @@ def encode(bytestring):
         doctest_debug('chunk: %s', chunk)
         integer = int.from_bytes(chunk, 'big')
         doctest_debug('integer: 0x%x', integer)
-        encoded += ''.join(list(reversed(list(encode_int(integer)))))
+        characters = list(reversed(list(encode_int(integer))))
+        doctest_debug('characters: %s', characters)
+        encoded += ''.join(characters)
     return encoded[:(-padding or None)]
 
 def decode(encoded):
