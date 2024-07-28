@@ -5,7 +5,7 @@ simple base 128 encoder/decoder
 Use base64 characters and method, except that a selection of printable
 8-bit Latin-1 characters are added to make each character represent 7 bits.
 Therefore every 8 encoded bytes represent 7 binary data bytes, slightly
-better than the 4:3 ratio of base64.
+better than the 4:3 (8:6) ratio of base64.
 '''
 import sys, os, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
@@ -94,6 +94,8 @@ def chunked(something, size):
     (['123', '4AA'], 2)
     >>> chunked('1234=', 5)
     (['1234A'], 1)
+    >>> chunked('1234', 5)
+    (['1234A'], 1)
     '''
     try:
         padding = len(something) - len(something.rstrip('='))
@@ -103,13 +105,13 @@ def chunked(something, size):
     chunks = [something[i: i + size] for i in range(0, len(something), size)]
     final = chunks[-1]
     if len(final) < size:
-        try:
+        if isinstance(final, bytes):
             chunks[-1] = final.ljust(size, b'\0')
             padding = len(chunks[-1]) - len(final)
-        except TypeError as error:
-            raise ValueError(
-                'Supplied string %r was not padded' % final
-            ) from error
+        else:
+            padding = size - len(final)  # let's just pad it
+            chunks[-1] = final.ljust(size, ZERO)
+            
     return chunks, padding
 
 if PROGRAM == 'doctest':
