@@ -7,11 +7,17 @@ Use base64 characters and method, except that a selection of printable
 Therefore every 5 encoded bytes represent 4 binary data bytes, slightly
 better than the 4:3 ratio of base64.
 '''
-import logging
+import sys, os, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 BASE128 = BASE64 + bytearray(range(193, 256)).decode('latin-1')
+PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
+
+def doctest_debug(message, *args, **kwargs):
+    '''
+    no-op unless redefined below
+    '''
 
 def encode(bytestring):
     '''
@@ -23,7 +29,9 @@ def encode(bytestring):
     '''
     for chunk in [bytestring[i:i + 4]
                   for i in range(0, len(bytestring) + 3, 4)]:
-        logging.debug('chunk: %s', chunk)
+        doctest_debug('chunk: %s', chunk)
+        integer = int.from_bytes(chunk)
+        doctest_debug('integer: 0x%x', integer)
 
 def decode(encoded):
     '''
@@ -32,4 +40,10 @@ def decode(encoded):
     >>> decode(BASE128)
     ''' 
     for chunk in [encoded[i:i + 5] for i in range(0, len(encoded) + 4, 5)]:
-        logging.debug('chunk: %s', chunk)
+        doctest_debug('chunk: %s', chunk)
+
+if PROGRAM == 'doctest':
+    def doctest_debug(message, *args, **kwargs):
+        logging.debug(message, *args, **kwargs)
+else:
+    logging.debug('sys.argv: %s', sys.argv)
