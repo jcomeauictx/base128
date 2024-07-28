@@ -6,6 +6,13 @@ Use base64 characters and method, except that a selection of printable
 8-bit Latin-1 characters are added to make each character represent 7 bits.
 Therefore every 8 encoded bytes represent 7 binary data bytes, slightly
 better than the 4:3 (8:6) ratio of base64.
+
+>>> len(BASE64)
+64
+>>> len(BASE128)
+128
+>>> encode(decode(BASE128)) == BASE128
+True
 '''
 import sys, os, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
@@ -44,7 +51,7 @@ def encode(bytestring):
         integer = int.from_bytes(chunk, 'big')
         doctest_debug('integer: 0x%x', integer)
         encoded += ''.join(list(reversed(list(encode_int(integer)))))
-    return encoded
+    return encoded[:(-padding or None)]
 
 def decode(encoded):
     '''
@@ -52,7 +59,6 @@ def decode(encoded):
 
     >>> len(decode(BASE128)) == (7 / 8) * len(BASE128)
     True
-    >>> decode('AAAA====')
     '''
     decoded = b''
     chunks, padding = chunked(encoded, 8)
@@ -72,7 +78,7 @@ def decode(encoded):
         except OverflowError as failed:
             logging.error('integer 0x%x will not fit in 7 bytes', integer)
             break
-    return decoded
+    return decoded[:(-padding or None)]
 
 def chunked(something, size):
     r'''
