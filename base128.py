@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
 ZERO = BASE128[0]
+PAD = '='
 PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
 
 def doctest_debug(message, *args, **kwargs):  # pylint: disable=unused-argument
@@ -28,13 +29,48 @@ def doctest_debug(message, *args, **kwargs):  # pylint: disable=unused-argument
     '''
 
 def encode(bytestring):
-    '''
+    r'''
     encode bytes to base128
 
     avoids using := or itertools, to make this work with older Python versions.
 
-    >>> len(encode(bytes(range(256)))) == (8 / 7) * 256
-    True
+    >>> from base64 import b64encode
+    >>> encode(b'\0')
+    'AA======'
+    >>> b64encode(b'\0')
+    'AA======'
+    >>> encode(b'\0\1')
+    'AAg====='
+    >>> b64encode(b'\0\1')
+    'AAg====='
+    >>> encode(b'\0\1\2')
+    'AAgg===='
+    >>> b64encode(b'\0\1\2')
+    'AAgg===='
+    >>> encode(b'\0\1\2\3')
+    'AAggY==='
+    >>> b64encode(b'\0\1\2\3')
+    'AAggY==='
+    >>> encode(b'\0\1\2\3\4')
+    'AAggYQ=='
+    >>> b64encode(b'\0\1\2\3\4')
+    'AAggYQ=='
+    >>> encode(b'\0\1\2\3\4\5')
+    'AAggYQK='
+    >>> b64encode(b'\0\1\2\3\4\5')
+    'AAggYQK='
+    >>> encode(b'\0\1\2\3\4\5\6')
+    'AAggYQKG'
+    >>> b64encode(b'\0\1\2\3\4\5\6')
+    'AAggYQKG'
+    >>> encode(b'\0\1\2\3\4\5\6\7')
+    'AAggYQKGDÀ======'
+    >>> b64encode(b'\0\1\2\3\4\5\6\7')
+    'AAggYQKGDÀ======'
+    >>> encode(b'\0\1\2\3\4\5\6\7\0x8')
+    'AAggYQKGDÀPDÀ==='
+    >>> b64encode(b'\0\1\2\3\4\5\6\7\0x8')
+    'AAggYQKGDÀPDÀ==='
     '''
     def encode_int(integer):
         '''
@@ -54,14 +90,35 @@ def encode(bytestring):
         characters = list(reversed(list(encode_int(integer))))
         doctest_debug('characters: %s', characters)
         encoded += ''.join(characters)
-    return encoded
+    return encoded[:(-padding or None)] + PAD * padding
 
 def decode(encoded):
-    '''
+    r'''
     decode base128 string to binary
 
+    >>> from base64 import b64decode
     >>> len(decode(BASE128)) == (7 / 8) * len(BASE128)
     True
+    >>> decode('AA======')
+    b'\x00'
+    >>> b64decode('AA======')
+    b'x\00'
+    >>> decode('AAg=====')
+    >>> b64decode('AAg=====')
+    >>> decode('AAgg====')
+    >>> b64decode('AAgg====')
+    >>> decode('AAggY===')
+    >>> b64decode('AAggY===')
+    >>> decode('AAggYQ==')
+    >>> b64decode('AAggYQ==')
+    >>> decode('AAggYQK=')
+    >>> b64decode('AAggYQK=')
+    >>> decode('AAggYQKG')
+    >>> b64decode('AAggYQKG')
+    >>> decode('AAggYQKGDA======')
+    >>> b64decode('AAggYQKGDA======')
+    >>> decode('AAggYQKGDAPDA===')
+    >>> b64decode('AAggYQKGDAPDA===')
     '''
     decoded = b''
     chunks, padding = chunked(encoded, 8)
