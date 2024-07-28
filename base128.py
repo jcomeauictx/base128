@@ -27,8 +27,21 @@ def encode(bytestring):
 
     >>> encode(bytes(range(256)))
     '''
-    for chunk in [bytestring[i:i + 7]
-                  for i in range(0, len(bytestring) + 6, 7)]:
+    chunks = [bytestring[i:i + 7]
+              for i in range(0, len(bytestring) + 6, 7)]
+    padding = 0
+    final = chunks[-1]
+    if len(final):
+        doctest_debug('padding final chunk if necessary')
+        padded = final.ljust(7, b'\0')
+        padding = len(padded) - len(final)
+        chunks[-1] = padded
+        doctest_debug('there are %d bytes of padding', padding)
+    else:
+        doctest_debug('final chunk empty, discarding')
+        chunks.pop(-1)
+    doctest_debug('chunks: %s', chunks)
+    for chunk in chunks:
         doctest_debug('chunk: %s', chunk)
         integer = int.from_bytes(chunk, 'big')
         doctest_debug('integer: 0x%x', integer)
