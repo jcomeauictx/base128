@@ -39,15 +39,19 @@ def decode(encoded):
 
     >>> decode(BASE128)
     '''
-    integer = 0
     decoded = b''
     for chunk in [encoded[i:i + 8] for i in range(0, len(encoded) + 7, 8)]:
         doctest_debug('chunk: %s', chunk)
+        integer = 0
         for character in chunk:
             integer <<= 7
             integer |= BASE128.index(character)
         doctest_debug('integer: 0x%x', integer)
-        decoded += integer.to_bytes(7, 'big')
+        try:
+            decoded += integer.to_bytes(7, 'big')
+        except OverflowError as failed:
+            logging.error('integer 0x%x will not fit in 7 bytes', integer)
+            break
     return decoded
 
 if PROGRAM == 'doctest':
