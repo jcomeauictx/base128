@@ -11,7 +11,8 @@ import sys, os, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-BASE128 = BASE64 + bytearray(range(193, 256)).decode('latin-1')
+BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
+ZERO = BASE128[0]
 PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
 
 def doctest_debug(message, *args, **kwargs):  # pylint: disable=unused-argument
@@ -25,7 +26,7 @@ def encode(bytestring):
 
     avoids using := or itertools, to make this work with older Python versions.
 
-    >>> encode(bytes(range(256)))
+    >>> len(encode(bytes(range(256))))
     '''
     chunks, padding = chunked(bytestring, 7)
     for chunk in chunks:
@@ -37,7 +38,9 @@ def decode(encoded):
     '''
     decode base128 string to binary
 
-    >>> decode(BASE128)
+    >>> len(decode(BASE128)) == (7 / 8) * len(BASE128)
+    True
+    >>> decode('AAAA====')
     '''
     decoded = b''
     chunks, padding = chunked(encoded, 8)
@@ -63,7 +66,7 @@ def chunked(something, size):
     r'''
     split string or bytes into chunks of size `size`
 
-    use padding if necessary (b'\0' if bytes and '=' if string)
+    use padding (b'\0' if bytes; strings should already be padded
 
     >>> chunked(b'1234', 1)
     ([b'1', b'2', b'3', b'4'], 0)
@@ -75,20 +78,26 @@ def chunked(something, size):
     ([b'1234'], 0)
     >>> chunked(b'1234', 5)
     ([b'1234\x00'], 1)
-    >>> chunked('1234', 3)
-    (['123', '4=='], 2)
-    >>> chunked('1234', 5)
-    (['1234='], 1)
+    >>> chunked('1234==', 3)
+    (['123', '4AA'], 2)
+    >>> chunked('1234=', 5)
+    (['1234A'], 1)
     '''
-    padding = 0
+    try:
+        padding = len(something) - len(something.rstrip('='))
+        something = something.replace('=', ZERO)
+    except TypeError:
+        padding = 0
     chunks = [something[i: i + size] for i in range(0, len(something), size)]
     final = chunks[-1]
     if len(final) < size:
         try:
             chunks[-1] = final.ljust(size, b'\0')
-        except TypeError:
-            chunks[-1] = final.ljust(size, '=')
-        padding = len(chunks[-1]) - len(final)
+            padding = len(chunks[-1]) - len(final)
+        except TypeError as error:
+            raise ValueError(
+                'Supplied string %r was not padded' % final
+            ) from error
     return chunks, padding
 
 if PROGRAM == 'doctest':
