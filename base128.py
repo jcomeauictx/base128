@@ -146,7 +146,7 @@ def decode(encoded):
         doctest_debug('integer: 0x%x', integer)
         try:
             decoded += integer.to_bytes(7, 'big')
-        except OverflowError as failed:
+        except OverflowError:
             logging.error('integer 0x%x will not fit in 7 bytes', integer)
             break
     return decoded[:(-padding or None)]
@@ -188,8 +188,16 @@ def chunked(something, size):
         else:
             padding = size - len(final)  # let's just pad it
             chunks[-1] = final.ljust(size, ZERO)
-            
+
     return chunks, padding
+
+def dispatch(command=None, infile=None, outfile=None):
+    '''
+    call subroutine as command line specifies
+    '''
+    if command not in ('encode', 'decode'):
+        logging.error('Must specify either "encode" or "decode"')
+        return
 
 if PROGRAM == 'doctest':
     # pylint: disable=function-redefined
@@ -198,5 +206,5 @@ if PROGRAM == 'doctest':
         verbose debugging only during doctests
         '''
         logging.debug(message, *args, **kwargs)
-else:
-    logging.debug('sys.argv: %s', sys.argv)
+elif __name__ == '__main__':
+    dispatch(*sys.argv[1:])
