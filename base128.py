@@ -33,14 +33,15 @@ def encode(bytestring):
 
     avoids using := or itertools, to make this work with older Python versions.
 
-    >>> encode(bytes(range(256)))
+    >>> len(encode(bytes(range(256)))) == (8 / 7) * 256
+    True
     '''
     def encode_int(integer):
         '''
         inner generator function to process one integerified chunk at a time
         '''
         bitmask = (1 << 7) - 1
-        for _ in range(7):
+        for _ in range(8):
             yield BASE128[integer & bitmask]
             integer >>= 7
 
@@ -53,7 +54,7 @@ def encode(bytestring):
         characters = list(reversed(list(encode_int(integer))))
         doctest_debug('characters: %s', characters)
         encoded += ''.join(characters)
-    return encoded[:(-padding or None)]
+    return encoded
 
 def decode(encoded):
     '''
