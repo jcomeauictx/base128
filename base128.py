@@ -134,23 +134,13 @@ def decode(encoded):
     >>> decode('AAggYQKGDÂA=====')
     b'\x00\x01\x02\x03\x04\x05\x06\x07\x08'
     '''
-    decoded = b''
     chunks, padding = chunked(encoded, 8)
-    chunk = integer = None  # define here so they show up in error messages
     logging.debug('decoding ...%s', chunks[-5:])
-    try:
-        for chunk in chunks:
-            #doctest_debug('chunk: %s', chunk)
-            integer = 0
-            for character in chunk:
-                integer = (integer << 7) | DICT128[character]
-            decoded += integer.to_bytes(7, 'big')
-    except ValueError as problem:
-        logging.error('failed decode of chunk %r: %s', chunk, problem)
-        raise
-    except OverflowError:
-        logging.error('integer 0x%x will not fit in 7 bytes', integer)
-        raise
+    decoded = b''
+    pieces = []
+    for chunk in chunks:
+        pieces.append(decode_chunk(chunk))
+    decoded = b''.join(pieces)
     return decoded[:(-padding or None)]
 
 def chunked(something, size, pad=True):
@@ -203,6 +193,27 @@ def encode_int(integer):
     for _ in range(8):
         yield BASE128[integer & bitmask]
         integer >>= 7
+
+def decode_chunk(chunk):
+    '''
+    get binary data from chunk of latin-1 data
+    '''
+    integer = 0
+    decoded = []
+    character = b''  # define here so it will show up in error message
+    #doctest_debug('chunk: %s', chunk)
+    try:
+        for character in chunk:
+            integer = (integer << 7) | DICT128[character]
+            decoded.append(integer.to_bytes(7, 'big'))
+        return b''.join(decoded)
+    except ValueError as problem:
+        logging.error('failed decode of chunk %r at byte %r: %s',
+                      chunk, character, problem)
+        raise
+    except OverflowError:
+        logging.error('integer 0x%x will not fit in 7 bytes', integer)
+        raise
 
 def preprocess(command, something):
     '''
