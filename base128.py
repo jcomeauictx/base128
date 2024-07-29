@@ -151,7 +151,7 @@ def decode(encoded):
             break
     return decoded[:(-padding or None)]
 
-def chunked(something, size):
+def chunked(something, size, pad=True):
     r'''
     split string or bytes into chunks of size `size`
 
@@ -175,9 +175,12 @@ def chunked(something, size):
     (['1234A'], 1)
     '''
     try:
-        padding = len(something) - len(something.rstrip('='))
-        something = something.replace('=', ZERO)
-    except TypeError:
+        if pad:
+            padding = len(something) - len(something.rstrip('='))
+            something = something.replace('=', ZERO)
+        else:
+            raise PermissionError('No padding requested')
+    except (TypeError, PermissionError):
         padding = 0
     chunks = [something[i: i + size] for i in range(0, len(something), size)]
     final = chunks[-1]
@@ -185,10 +188,9 @@ def chunked(something, size):
         if isinstance(final, bytes):
             chunks[-1] = final.ljust(size, b'\0')
             padding = len(chunks[-1]) - len(final)
-        else:
-            padding = size - len(final)  # let's just pad it
+        elif pad:
+            padding = size - len(final)
             chunks[-1] = final.ljust(size, ZERO)
-
     return chunks, padding
 
 def dispatch(command=None, infile=None, outfile=None):
@@ -201,8 +203,7 @@ def dispatch(command=None, infile=None, outfile=None):
     def latin1_open(*args):
         if not args[-1].endswith('b'):
             return open(*args, encoding='latin-1')
-        else:
-            return open(*args)
+        return open(*args)  # pylint: disable=unspecified-encoding
     if command not in ('encode', 'decode'):
         logging.error('Must specify either "encode" or "decode"')
         return
@@ -216,8 +217,7 @@ def dispatch(command=None, infile=None, outfile=None):
         'decode': lambda s: ''.join(s.split())
     }[command]
     postprocess = {
-        'encode': str,  # temporary, just to figure out problem
-        #'encode': lambda s: '\r\n'.join(chunked(s, 76)),
+        'encode': lambda s: '\r\n'.join(chunked(s, 76, False)[0]),
         'decode': bytes
     }[command]
     infile = latin1_open(infile, modes[0]) if infile else stdio[0]
