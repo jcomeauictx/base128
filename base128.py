@@ -133,13 +133,15 @@ def decode(encoded):
     '''
     decoded = b''
     chunks, padding = chunked(encoded, 8)
+    base128 = {c: BASE128.index(c) for c in BASE128}
+    logging.log(logging.NOTSET, 'base128: %s', base128)
     for chunk in chunks:
         doctest_debug('chunk: %s', chunk)
         integer = 0
         for character in chunk:
             integer <<= 7
             try:
-                integer |= BASE128.index(character)
+                integer |= base128[character]
             except ValueError as problem:
                 logging.error('failed decode at %r: %s', character, problem)
                 raise
