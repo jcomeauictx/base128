@@ -4,6 +4,7 @@ PYLINT ?= $(shell which pylint pylint3 true 2>/dev/null | head -n 1)
 PROFILE_LOG := profile.raw.log
 PROFILE_TXT := profile.txt.log
 %.run: /tmp/bash.d128
+	diff $< /bin/bash
 /tmp/bash.d128: base128.py /tmp/bash.b128
 	$(PYTHON) $< decode $(word 2, $+) $@
 /tmp/bash.b128: base128.py /bin/bash

@@ -198,7 +198,7 @@ def chunked(something, size, pad=True):
 
 def preprocess(command, something):
     '''
-    return bytes unchanged, but clean up unicode
+    return bytes unchanged, but clean up latin-1
     '''
     processed = something
     if command == 'decode':
@@ -212,7 +212,7 @@ def preprocess(command, something):
 
 def postprocess(command, something):
     '''
-    split up unicode into lines, but pass through bytes unchanged
+    split up latin-1 into lines, but pass through bytes unchanged
     '''
     processed = something
     if command == 'encode':
@@ -224,29 +224,38 @@ def postprocess(command, something):
         logging.debug('no postprocessing done for %s', command)
     return processed
 
+def latin1_open(*args, **kwargs):
+    logging.debug('latin1_open(*%s)', args)
+    if hasattr(args[0], 'fileno'):
+        if args[0] in (sys.stdin, sys.stdout):
+            kwargs['encoding'] = 'latin-1'
+            return io.open(args[0].fileno(), *args[1:], **kwargs)
+        else:
+            return args[0]  # sys.{stdin,stdout}.buffer
+    elif not args[-1].endswith('b'):  # not binary means string
+        logging.debug('opening %s as latin-1 string data', args[0])
+        return open(*args, encoding='latin-1')
+    else:
+        logging.debug('opening %s as binary data', args[0])
+        return open(*args)  # pylint: disable=unspecified-encoding
+
 def dispatch(command=None, infile=None, outfile=None):
     '''
     call subroutine as command line specifies
 
-    `encode` reads binary and writes unicode
-    `decode` reads unicode and writes binary
+    `encode` reads binary and writes latin-1
+    `decode` reads latin-1 and writes binary
     '''
-    def latin1_open(*args):
-        if not args[-1].endswith('b'):
-            return open(*args, encoding='latin-1')
-        return open(*args)  # pylint: disable=unspecified-encoding
-    latin1_in = io.open(sys.stdin.fileno(), encoding='latin-1')
-    latin1_out = io.open(sys.stdout.fileno(), encoding='latin-1')
     if command not in ('encode', 'decode'):
         logging.error('Must specify either "encode" or "decode"')
         return
     modes = {'encode': ('rb', 'w'), 'decode': ('r', 'wb')}[command]
     stdio = {
-        'encode': (sys.stdin.buffer, latin1_out),
-        'decode': (latin1_in, sys.stdout.buffer)
+        'encode': (sys.stdin.buffer, sys.stdout),
+        'decode': (sys.stdin, sys.stdout.buffer)
     }[command]
-    infile = latin1_open(infile, modes[0]) if infile else stdio[0]
-    outfile = latin1_open(outfile, modes[1]) if outfile else stdio[1]
+    infile = latin1_open(infile or stdio[0], modes[0])
+    outfile = latin1_open(outfile or stdio[1], modes[1])
     logging.debug('command: %s, infile: %s, outfile: %s',
                   command, infile, outfile)
     data = preprocess(command, infile.read())
