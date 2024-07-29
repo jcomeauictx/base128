@@ -1,14 +1,19 @@
+SHELL := /bin/bash
 SCRIPTS := $(wildcard *.py)
 PYTHON ?= python3
 PYLINT ?= $(shell which pylint pylint3 true 2>/dev/null | head -n 1)
 PROFILE_LOG := profile.raw.log
 PROFILE_TXT := profile.txt.log
-%.run: /tmp/bash.d128
+all: run stdio profile
+run: /tmp/bash.d128
 	diff $< /bin/bash
-/tmp/bash.d128: base128.py /tmp/bash.b128
-	$(PYTHON) $< decode $(word 2, $+) $@
-/tmp/bash.b128: base128.py /bin/bash
-	$(PYTHON) $< encode $(word 2, $+) $@
+stdio: base128.py
+	echo testing testing one two three... | $(PYTHON) $< encode | \
+	 $(PYTHON) $< decode
+/tmp/bash.d128: base128.py /tmp/bash.b128 Makefile
+	time $(PYTHON) $< decode $(word 2, $+) $@
+/tmp/bash.b128: base128.py /bin/bash Makefile
+	time $(PYTHON) $< encode $(word 2, $+) $@
 %.doctest: %.py
 	$(PYTHON) -m doctest $< 2>&1
 doctest: $(SCRIPTS:.py=.doctest)
