@@ -22,6 +22,7 @@ BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
 ZERO = BASE128[0]
 PAD = '='
 PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
+LINE_LENGTH = 76  # per base64 wikipedia
 
 def doctest_debug(message, *args, **kwargs):  # pylint: disable=unused-argument
     '''
@@ -209,6 +210,20 @@ def preprocess(command, something):
         logging.debug('no preprocessing done for %s', command)
     return processed
 
+def postprocess(command, something):
+    '''
+    split up unicode into lines, but pass through bytes unchanged
+    '''
+    processed = something
+    if command == 'encode':
+        chunks = chunked(something, LINE_LENGTH, False)[0]
+        logging.debug('postprocessing chunks: ...%r', chunks[-2:])
+        processed = os.linesep.join(chunks) + os.linesep
+        logging.debug('processed: ...%r', processed[-80:])
+    else:
+        logging.debug('no postprocessing done for %s', command)
+    return processed
+
 def dispatch(command=None, infile=None, outfile=None):
     '''
     call subroutine as command line specifies
@@ -230,16 +245,14 @@ def dispatch(command=None, infile=None, outfile=None):
         'encode': (sys.stdin.buffer, latin1_out),
         'decode': (latin1_in, sys.stdout.buffer)
     }[command]
-    postprocess = {
-        'encode': lambda s: '\r\n'.join(chunked(s, 76, False)[0]),
-        'decode': bytes
-    }[command]
     infile = latin1_open(infile, modes[0]) if infile else stdio[0]
     outfile = latin1_open(outfile, modes[1]) if outfile else stdio[1]
     logging.debug('command: %s, infile: %s, outfile: %s',
                   command, infile, outfile)
     data = preprocess(command, infile.read())
-    outfile.write(postprocess(eval(command)(data)))  # pylint: disable=eval-used
+    outfile.write(postprocess(
+        command, eval(command)(data))  # pylint: disable=eval-used
+    )
 
 if PROGRAM == 'doctest':
     # pylint: disable=function-redefined
