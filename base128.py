@@ -113,7 +113,7 @@ def decode(encoded):
     b'\x00\x08 '
     >>> decode('AAggY===')
     b'\x00\x01\x02\x03'
-    >>> # b64decode('AAggY')  # invalid base64 string
+    >>> # b64decode('AAggY===')  # invalid base64 string
     >>> decode('AAggYQ==')
     b'\x00\x01\x02\x03\x04'
     >>> b64decode('AAggYQ==')
@@ -194,10 +194,22 @@ def chunked(something, size):
 def dispatch(command=None, infile=None, outfile=None):
     '''
     call subroutine as command line specifies
+
+    `encode` reads binary and writes unicode
+    `decode` reads unicode and writes binary
     '''
     if command not in ('encode', 'decode'):
         logging.error('Must specify either "encode" or "decode"')
         return
+    modes = {'encode': ('rb', 'w'), 'decode': ('r', 'wb')}[command]
+    stdio = {
+        'encode': (sys.stdin.buffer, sys.stdout),
+        'decode': (sys.stdin, sys.stdout.buffer)
+    }[command]
+    infile = open(infile, modes[0]) if infile else stdio[0]
+    outfile = open(outfile, modes[1]) if outfile else stdio[1]
+    logging.debug('command: %s, infile: %s, outfile: %s',
+                  command, infile, outfile)
 
 if PROGRAM == 'doctest':
     # pylint: disable=function-redefined
