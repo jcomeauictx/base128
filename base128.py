@@ -16,7 +16,7 @@ True
 '''
 import sys, os, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
-# pylint: disable=consider-using-f-string
+# pylint: disable=consider-using-f-string, consider-using-with
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
 ZERO = BASE128[0]
@@ -198,6 +198,11 @@ def dispatch(command=None, infile=None, outfile=None):
     `encode` reads binary and writes unicode
     `decode` reads unicode and writes binary
     '''
+    def latin1_open(*args):
+        if not args[-1].endswith('b'):
+            return open(*args, encoding='latin-1')
+        else:
+            return open(*args)
     if command not in ('encode', 'decode'):
         logging.error('Must specify either "encode" or "decode"')
         return
@@ -206,10 +211,21 @@ def dispatch(command=None, infile=None, outfile=None):
         'encode': (sys.stdin.buffer, sys.stdout),
         'decode': (sys.stdin, sys.stdout.buffer)
     }[command]
-    infile = open(infile, modes[0]) if infile else stdio[0]
-    outfile = open(outfile, modes[1]) if outfile else stdio[1]
+    preprocess = {
+        'encode': bytes,
+        'decode': lambda s: ''.join(s.split())
+    }[command]
+    postprocess = {
+        'encode': str,  # temporary, just to figure out problem
+        #'encode': lambda s: '\r\n'.join(chunked(s, 76)),
+        'decode': bytes
+    }[command]
+    infile = latin1_open(infile, modes[0]) if infile else stdio[0]
+    outfile = latin1_open(outfile, modes[1]) if outfile else stdio[1]
     logging.debug('command: %s, infile: %s, outfile: %s',
                   command, infile, outfile)
+    data = preprocess(infile.read())
+    outfile.write(postprocess(eval(command)(data)))  # pylint: disable=eval-used
 
 if PROGRAM == 'doctest':
     # pylint: disable=function-redefined
