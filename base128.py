@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 # pylint: disable=consider-using-f-string, consider-using-with
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
+DICT128 = {c: BASE128.index(c) for c in BASE128}
 ZERO = BASE128[0]
 PAD = '='
 PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
@@ -81,6 +82,7 @@ def encode(bytestring):
     '''
     encoded = ''
     chunks, padding = chunked(bytestring, 7)
+    logging.debug('decoding ...%s', chunks[-5:])
     for chunk in chunks:
         #doctest_debug('chunk: %s', chunk)
         integer = int.from_bytes(chunk, 'big')
@@ -134,24 +136,21 @@ def decode(encoded):
     '''
     decoded = b''
     chunks, padding = chunked(encoded, 8)
-    base128 = {c: BASE128.index(c) for c in BASE128}
-    logging.log(logging.NOTSET, 'base128: %s', base128)
-    for chunk in chunks:
-        #doctest_debug('chunk: %s', chunk)
-        integer = 0
-        for character in chunk:
-            integer <<= 7
-            try:
-                integer |= base128[character]
-            except ValueError as problem:
-                logging.error('failed decode at %r: %s', character, problem)
-                raise
-        #doctest_debug('integer: 0x%x', integer)
-        try:
+    chunk = integer = None  # define here so they show up in error messages
+    logging.debug('decoding ...%s', chunks[-5:])
+    try:
+        for chunk in chunks:
+            #doctest_debug('chunk: %s', chunk)
+            integer = 0
+            for character in chunk:
+                integer = (integer << 7) | DICT128[character]
             decoded += integer.to_bytes(7, 'big')
-        except OverflowError:
-            logging.error('integer 0x%x will not fit in 7 bytes', integer)
-            break
+    except ValueError as problem:
+        logging.error('failed decode of chunk %r: %s', chunk, problem)
+        raise
+    except OverflowError:
+        logging.error('integer 0x%x will not fit in 7 bytes', integer)
+        raise
     return decoded[:(-padding or None)]
 
 def chunked(something, size, pad=True):
