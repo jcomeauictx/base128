@@ -197,16 +197,18 @@ def encode_int(integer):
 def decode_chunk(chunk):
     '''
     get binary data from chunk of latin-1 data
+
+    >>> decode_chunk('AAAAAAAA')
     '''
     integer = 0
-    decoded = []
-    character = b''  # define here so it will show up in error message
-    #doctest_debug('chunk: %s', chunk)
+    character = decoded = b''  # define here so they show up in error messages
+    doctest_debug('chunk: %s', chunk)
     try:
         for character in chunk:
             integer = (integer << 7) | DICT128[character]
-            decoded.append(integer.to_bytes(7, 'big'))
-        return b''.join(decoded)
+        decoded = integer.to_bytes(7, 'big')
+        doctest_debug('decoded: %s', decoded)
+        return decoded
     except ValueError as problem:
         logging.error('failed decode of chunk %r at byte %r: %s',
                       chunk, character, problem)
