@@ -25,6 +25,7 @@ ZERO = BASE128[0]
 PAD = '='
 PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
 LINE_LENGTH = 76  # per base64 wikipedia
+ENCODER_BITMASK = (1 << 7) - 1  # extract an index from integer
 
 def doctest_debug(message, *args, **kwargs):  # pylint: disable=unused-argument
     '''
@@ -189,9 +190,8 @@ def encode_int(integer):
     '''
     generator to process one integerified chunk at a time
     '''
-    bitmask = (1 << 7) - 1
     for _ in range(8):
-        yield BASE128[integer & bitmask]
+        yield BASE128[integer & ENCODER_BITMASK]
         integer >>= 7
 
 def decode_chunk(chunk):
@@ -203,12 +203,12 @@ def decode_chunk(chunk):
     '''
     integer = 0
     character = decoded = b''  # define here so they show up in error messages
-    doctest_debug('chunk: %s', chunk)
+    #doctest_debug('chunk: %s', chunk)
     try:
         for character in chunk:
             integer = (integer << 7) | DICT128[character]
         decoded = integer.to_bytes(7, 'big')
-        doctest_debug('decoded: %s', decoded)
+        #doctest_debug('decoded: %s', decoded)
         return decoded
     except ValueError as problem:
         logging.error('failed decode of chunk %r at byte %r: %s',
