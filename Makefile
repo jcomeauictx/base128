@@ -5,7 +5,7 @@ PYLINT ?= $(shell which pylint pylint3 true 2>/dev/null | head -n 1)
 PROFILE_LOG := profile.raw.log
 PROFILE_TXT := profile.txt.log
 TEST_TEXT ?= testing testing one two three...
-all: run stdio profile
+all: pylint doctest run stdio profile
 run: /tmp/bash.d128
 	diff $< /bin/bash
 stdio: base128.py

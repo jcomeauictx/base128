@@ -195,10 +195,11 @@ def encode_int(integer):
         integer >>= 7
 
 def decode_chunk(chunk):
-    '''
+    r'''
     get binary data from chunk of latin-1 data
 
     >>> decode_chunk('AAAAAAAA')
+    b'\x00\x00\x00\x00\x00\x00\x00'
     '''
     integer = 0
     character = decoded = b''  # define here so they show up in error messages
