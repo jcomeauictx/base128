@@ -14,6 +14,7 @@ better than the 4:3 (8:6) ratio of base64.
 >>> encode(decode(BASE128)) == BASE128
 True
 '''
+# -*- coding: latin-1 -*-
 import sys, os, io, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 # pylint: disable=consider-using-f-string, consider-using-with
@@ -27,6 +28,8 @@ LINE_LENGTH = 76  # per base64 wikipedia
 def doctest_debug(message, *args, **kwargs):  # pylint: disable=unused-argument
     '''
     no-op unless redefined below
+
+    still need to comment out all doctest_debug calls before release
     '''
 
 def encode(bytestring):
@@ -34,6 +37,9 @@ def encode(bytestring):
     encode bytes to base128
 
     avoids using := or itertools, to make this work with older Python versions.
+
+    b64encode output shown for comparison; for short strings, base64 is
+    often smaller.
 
     >>> from base64 import b64encode
     >>> encode(b'\0')
@@ -73,15 +79,6 @@ def encode(bytestring):
     >>> b64encode(b'\0\1\2\3\4\5\6\7\x08')
     b'AAECAwQFBgcI'
     '''
-    def encode_int(integer):
-        '''
-        inner generator function to process one integerified chunk at a time
-        '''
-        bitmask = (1 << 7) - 1
-        for _ in range(8):
-            yield BASE128[integer & bitmask]
-            integer >>= 7
-
     encoded = ''
     chunks, padding = chunked(bytestring, 7)
     for chunk in chunks:
@@ -96,6 +93,9 @@ def encode(bytestring):
 def decode(encoded):
     r'''
     decode base128 string to binary
+
+    b64decode output shown for comparison, except in cases where latin-1
+    characters are in the string.
 
     >>> from base64 import b64decode
     >>> len(decode(BASE128)) == (7 / 8) * len(BASE128)
@@ -196,6 +196,15 @@ def chunked(something, size, pad=True):
             chunks[-1] = final.ljust(size, ZERO)
     return chunks, padding
 
+def encode_int(integer):
+    '''
+    generator to process one integerified chunk at a time
+    '''
+    bitmask = (1 << 7) - 1
+    for _ in range(8):
+        yield BASE128[integer & bitmask]
+        integer >>= 7
+
 def preprocess(command, something):
     '''
     return bytes unchanged, but clean up latin-1
@@ -225,19 +234,21 @@ def postprocess(command, something):
     return processed
 
 def latin1_open(*args, **kwargs):
+    '''
+    make sure text inputs and outputs are read or written as latin-1
+    '''
     logging.debug('latin1_open(*%s)', args)
     if hasattr(args[0], 'fileno'):
         if args[0] in (sys.stdin, sys.stdout):
+            # pylint: disable=unspecified-encoding
             kwargs['encoding'] = 'latin-1'
             return io.open(args[0].fileno(), *args[1:], **kwargs)
-        else:
-            return args[0]  # sys.{stdin,stdout}.buffer
-    elif not args[-1].endswith('b'):  # not binary means string
+        return args[0]  # sys.{stdin,stdout}.buffer
+    if not args[-1].endswith('b'):  # not binary means string
         logging.debug('opening %s as latin-1 string data', args[0])
         return open(*args, encoding='latin-1')
-    else:
-        logging.debug('opening %s as binary data', args[0])
-        return open(*args)  # pylint: disable=unspecified-encoding
+    logging.debug('opening %s as binary data', args[0])
+    return open(*args)  # pylint: disable=unspecified-encoding
 
 def dispatch(command=None, infile=None, outfile=None):
     '''
