@@ -14,7 +14,7 @@ better than the 4:3 (8:6) ratio of base64.
 >>> encode(decode(BASE128)) == BASE128
 True
 '''
-import sys, os, logging  # pylint: disable=multiple-imports
+import sys, os, io, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 # pylint: disable=consider-using-f-string, consider-using-with
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -204,13 +204,15 @@ def dispatch(command=None, infile=None, outfile=None):
         if not args[-1].endswith('b'):
             return open(*args, encoding='latin-1')
         return open(*args)  # pylint: disable=unspecified-encoding
+    latin1_in = io.open(sys.stdin.fileno(), encoding='latin-1')
+    latin1_out = io.open(sys.stdout.fileno(), encoding='latin-1')
     if command not in ('encode', 'decode'):
         logging.error('Must specify either "encode" or "decode"')
         return
     modes = {'encode': ('rb', 'w'), 'decode': ('r', 'wb')}[command]
     stdio = {
-        'encode': (sys.stdin.buffer, sys.stdout),
-        'decode': (sys.stdin, sys.stdout.buffer)
+        'encode': (sys.stdin.buffer, latin1_out),
+        'decode': (latin1_in, sys.stdout.buffer)
     }[command]
     preprocess = {
         'encode': bytes,
