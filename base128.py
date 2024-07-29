@@ -84,11 +84,11 @@ def encode(bytestring):
     encoded = ''
     chunks, padding = chunked(bytestring, 7)
     for chunk in chunks:
-        doctest_debug('chunk: %s', chunk)
+        #doctest_debug('chunk: %s', chunk)
         integer = int.from_bytes(chunk, 'big')
-        doctest_debug('integer: 0x%x', integer)
+        #doctest_debug('integer: 0x%x', integer)
         characters = list(reversed(list(encode_int(integer))))
-        doctest_debug('characters: %s', characters)
+        #doctest_debug('characters: %s', characters)
         encoded += ''.join(characters)
     return encoded[:(-padding or None)] + PAD * padding
 
@@ -136,7 +136,7 @@ def decode(encoded):
     base128 = {c: BASE128.index(c) for c in BASE128}
     logging.log(logging.NOTSET, 'base128: %s', base128)
     for chunk in chunks:
-        doctest_debug('chunk: %s', chunk)
+        #doctest_debug('chunk: %s', chunk)
         integer = 0
         for character in chunk:
             integer <<= 7
@@ -145,7 +145,7 @@ def decode(encoded):
             except ValueError as problem:
                 logging.error('failed decode at %r: %s', character, problem)
                 raise
-        doctest_debug('integer: 0x%x', integer)
+        #doctest_debug('integer: 0x%x', integer)
         try:
             decoded += integer.to_bytes(7, 'big')
         except OverflowError:
