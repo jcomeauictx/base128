@@ -11,4 +11,5 @@ profile: base128.profile
 %.profile: %.py
 	cat /tmp/bash.b128 | python3 -OO -c "import cProfile; \
 	 from $* import dispatch; \
-         cProfile.run(\"dispatch('decode')\")" > /tmp/base128.profile.bash.log
+         cProfile.run(\"dispatch('decode', None, '/tmp/bash.d128')\", \
+	  '/tmp/base128.profile.log')"
