@@ -9,7 +9,7 @@ PROFILE_TXT := profile.txt.log
 /tmp/bash.b128: base128.py /bin/bash
 	$(PYTHON) $< encode $(word 2, $+) $@
 %.doctest: %.py
-	$(PYTHON) -m doctest $< 2>&1 | less
+	$(PYTHON) -m doctest $< 2>&1
 doctest: $(SCRIPTS:.py=.doctest)
 %.pylint: %.py
 	$(PYLINT) $<
