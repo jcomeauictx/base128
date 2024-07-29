@@ -7,9 +7,8 @@ doctest: $(SCRIPTS:.py=.doctest)
 %.pylint: %.py
 	$(PYLINT) $<
 pylint: $(SCRIPTS:.py=.pylint)
-profile: base128.profile
-%.profile: %.py
+profile: base128.profile.log
+%.profile.log: %.py
 	cat /tmp/bash.b128 | python3 -OO -c "import cProfile; \
 	 from $* import dispatch; \
-         cProfile.run(\"dispatch('decode', None, '/tmp/bash.d128')\", \
-	  '/tmp/base128.profile.log')"
+         cProfile.run(\"dispatch('decode', None, '/tmp/bash.d128')\")" > $@
