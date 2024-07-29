@@ -195,6 +195,20 @@ def chunked(something, size, pad=True):
             chunks[-1] = final.ljust(size, ZERO)
     return chunks, padding
 
+def preprocess(command, something):
+    '''
+    return bytes unchanged, but clean up unicode
+    '''
+    processed = something
+    if command == 'decode':
+        logging.debug('preprocessing %s data %r', command, something[:80])
+        processed = ''.join(something.split())
+        if processed == something:
+            logging.debug('preprocessing left data unchanged')
+    else:
+        logging.debug('no preprocessing done for %s', command)
+    return processed
+
 def dispatch(command=None, infile=None, outfile=None):
     '''
     call subroutine as command line specifies
@@ -216,10 +230,6 @@ def dispatch(command=None, infile=None, outfile=None):
         'encode': (sys.stdin.buffer, latin1_out),
         'decode': (latin1_in, sys.stdout.buffer)
     }[command]
-    preprocess = {
-        'encode': bytes,
-        'decode': lambda s: ''.join(s.split())
-    }[command]
     postprocess = {
         'encode': lambda s: '\r\n'.join(chunked(s, 76, False)[0]),
         'decode': bytes
@@ -228,7 +238,7 @@ def dispatch(command=None, infile=None, outfile=None):
     outfile = latin1_open(outfile, modes[1]) if outfile else stdio[1]
     logging.debug('command: %s, infile: %s, outfile: %s',
                   command, infile, outfile)
-    data = preprocess(infile.read())
+    data = preprocess(command, infile.read())
     outfile.write(postprocess(eval(command)(data)))  # pylint: disable=eval-used
 
 if PROGRAM == 'doctest':
