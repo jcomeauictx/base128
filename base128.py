@@ -131,9 +131,9 @@ def decode(encoded):
     b'\x00\x01\x02\x03\x04\x05\x06'
     >>> b64decode('AAggYQKG')
     b'\x00\x08 a\x02\x86'
-    >>> decode('AAggYQKGDÀ======')
+    >>> decode('AAggYQKGD\xc0======')
     b'\x00\x01\x02\x03\x04\x05\x06\x07'
-    >>> decode('AAggYQKGDÂA=====')
+    >>> decode('AAggYQKGD\xc2A=====')
     b'\x00\x01\x02\x03\x04\x05\x06\x07\x08'
     '''
     chunks, padding = chunked(encoded, 8)
