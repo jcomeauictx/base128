@@ -46,16 +46,16 @@ def encode(bytestring):
     >>> from base64 import b64encode
     >>> encode(b'\0')
     'AA======'
-    >>> b64encode(b'\0').decode()
-    'AA=='
+    >>> b64encode(b'\0')
+    b'AA=='
     >>> encode(b'\0\1')
     'AAg====='
-    >>> b64encode(b'\0\1').decode()
-    'AAE='
+    >>> b64encode(b'\0\1')
+    b'AAE='
     >>> encode(b'\0\1\2')
     'AAgg===='
-    >>> b64encode(b'\0\1\2').decode()
-    'AAEC'
+    >>> b64encode(b'\0\1\2')
+    b'AAEC'
     >>> encode(b'\0\1\2\3')
     'AAggY==='
     >>> b64encode(b'\0\1\2\3')
@@ -72,12 +72,13 @@ def encode(bytestring):
     'AAggYQKG'
     >>> b64encode(b'\0\1\2\3\4\5\6')
     b'AAECAwQFBg=='
-    >>> encode(b'\0\1\2\3\4\5\6\7')
-    'AAggYQKGDÀ======'
+    >>> # to avoid unicode characters in program source, encode these to bytes
+    >>> encode(b'\0\1\2\3\4\5\6\7').encode('latin-1')
+    b'AAggYQKGD\xc0======'
     >>> b64encode(b'\0\1\2\3\4\5\6\7')
     b'AAECAwQFBgc='
-    >>> encode(b'\0\1\2\3\4\5\6\7\x08')
-    'AAggYQKGDÂA====='
+    >>> encode(b'\0\1\2\3\4\5\6\7\x08').encode('latin-1')
+    b'AAggYQKGD\xc2A====='
     >>> b64encode(b'\0\1\2\3\4\5\6\7\x08')
     b'AAECAwQFBgcI'
     '''
