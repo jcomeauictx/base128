@@ -14,7 +14,6 @@ better than the 4:3 (8:6) ratio of base64.
 >>> encode(decode(BASE128)) == BASE128
 True
 '''
-# -*- coding: latin-1 -*-
 import sys, os, io, logging  # pylint: disable=multiple-imports
 logging.basicConfig(level=logging.DEBUG if __debug__ else logging.INFO)
 # pylint: disable=consider-using-f-string, consider-using-with
