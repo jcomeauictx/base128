@@ -29,6 +29,6 @@ profile: base128.$(PROFILE_TXT)
 	$(PYTHON) -OO -c "import pstats; p = pstats.Stats('$<'); \
 	 p.sort_stats('cumulative').print_stats()" | tee $@
 clean:
-	rm -f dummy *.log
+	rm -f dummy *.log *.pyc *.pyo
 distclean:
 	rm -rf dummy __pycache__
