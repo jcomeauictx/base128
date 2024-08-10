@@ -7,6 +7,12 @@ Use base64 characters and method, except that a selection of printable
 Therefore every 8 encoded bytes represent 7 binary data bytes, slightly
 better than the 4:3 (8:6) ratio of base64.
 
+The maximum padding in each case is one less than the number of bytes in
+an uncompressed group: therefore, 7-1=6 in base128 and 3-1=2 in the case of
+base64. Six padding characters ("=") in a short compressed string will easily
+ruin whatever is gained by the better compression, so we will choose some
+other unused characters to represent 2, 3, 4, 5, and 6 padding characters.
+
 >>> len(BASE64)
 64
 >>> len(BASE128)
@@ -22,6 +28,7 @@ BASE128 = BASE64 + bytearray(range(192, 256)).decode('latin-1')
 DICT128 = {c: BASE128.index(c) for c in BASE128}
 ZERO = BASE128[0]
 PAD = '='
+PADDING = [PAD] + [chr(n) for n in range(161, 166)]
 PROGRAM = os.path.splitext(os.path.basename(sys.argv[0] or ''))[0]
 LINE_LENGTH = 76  # per base64 wikipedia
 ENCODER_BITMASK = (1 << 7) - 1  # extract an index from integer
@@ -225,7 +232,7 @@ def preprocess(command, something):
     processed = something
     if command == 'decode':
         logging.debug('preprocessing %s data %r', command, something[:80])
-        processed = ''.join(something.split())
+        processed = pessimize_padding(''.join(something.split()))
         if processed == something:
             logging.debug('preprocessing left data unchanged')
     else:
@@ -238,7 +245,7 @@ def postprocess(command, something):
     '''
     processed = something
     if command == 'encode':
-        chunks = chunked(something, LINE_LENGTH, False)[0]
+        chunks = chunked(optimize_padding(something), LINE_LENGTH, False)[0]
         logging.debug('postprocessing chunks: ...%r', chunks[-2:])
         processed = os.linesep.join(chunks) + os.linesep
         logging.debug('processed: ...%r', processed[-80:])
@@ -262,6 +269,32 @@ def latin1_open(*args, **kwargs):
         return open(*args, encoding='latin-1')
     logging.debug('opening %s as binary data', args[0])
     return open(*args)  # pylint: disable=unspecified-encoding
+
+def optimize_padding(encoded):
+    r'''
+    combine 2 to 6 padding characters ("=") into one extended pad character
+
+    >>> optimize_padding('AA======')
+    'AA\xa5'
+    '''
+    padding = len(encoded) - len(encoded.rstrip(PAD))
+    if padding > 1:
+        encoded = encoded.rstrip(PAD) + PADDING[padding - 1]
+    return encoded
+
+def pessimize_padding(encoded):
+    r'''
+    convert extended pad character into 2 to 6 "=" characters
+
+    this does *not* check for malformed combinations of base64-style pad
+    characters and base128 extended padding.
+
+    >>> pessimize_padding('AA\xa5')
+    'AA======'
+    '''
+    if encoded.endswith(tuple(PADDING[1:])):
+        encoded = encoded[:-1] + (PAD * (PADDING.index(encoded[-1]) + 1))
+    return encoded
 
 def dispatch(command=None, infile=None, outfile=None):
     '''
